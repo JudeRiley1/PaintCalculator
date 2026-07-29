@@ -33,6 +33,9 @@ test("server-renders the Paper + Paint calculator", async () => {
   assert.match(html, /From screen to/);
   assert.match(html, /Enter your Adobe color/);
   assert.match(html, /Your mix recipe/);
+  assert.match(html, /Calibrate with your dried swatches/);
+  assert.match(html, /Your paper color/);
+  assert.match(html, /Thin coats/);
   assert.match(html, /Master(?:&#x27;|')s Touch/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
@@ -50,6 +53,8 @@ test("keeps the calculator client-side and GitHub Pages-ready", async () => {
   assert.match(calculator, /Titanium White/);
   assert.match(calculator, /cmyk\[channel\] === 0 \? "" : cmyk\[channel\]/);
   assert.match(calculator, /placeholder="0"/);
+  assert.match(calculator, /allocateExactDrops/);
+  assert.match(calculator, /getMatchQuality/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
   assert.match(packageJson, /"build:pages": "next build"/);
 });

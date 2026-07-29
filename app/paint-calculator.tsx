@@ -1,158 +1,79 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  DEFAULT_CALIBRATION,
+  DEFAULT_CMYK,
+  DEFAULT_PAPER_HEX,
+  allocateExactDrops,
+  clamp,
+  cmykToRgb,
+  compositeOnPaper,
+  describeColor,
+  getMatchQuality,
+  getRecipeWeights,
+  hexToRgb,
+  rgbToCmyk,
+  rgbToHex,
+  type Cmyk,
+  type PaintCalibration,
+  type PaintKey,
+  type Rgb,
+  type SurfaceMode,
+} from "./paint-logic";
 
-type Cmyk = { c: number; m: number; y: number; k: number };
-type SurfaceMode = "white-base" | "direct";
 type Unit = "mL" | "tsp" | "fl oz" | "drops";
+type InputMode = "cmyk" | "rgb" | "hex";
 type SavedColor = Cmyk & { id: string; name: string; hex: string };
 
-type Paint = {
-  key: string;
+type PaintDetail = {
+  key: PaintKey;
   name: string;
   role: string;
   color: string;
-  weight: number;
-  amount: number;
-  parts: number;
 };
 
-const DEFAULT_CMYK: Cmyk = { c: 8, m: 72, y: 78, k: 4 };
-const BROWN_PAPER = { r: 178, g: 135, b: 84 };
-
-const paintDetails: Record<string, Omit<Paint, "weight" | "amount" | "parts">> = {
+const paintDetails: Record<PaintKey, PaintDetail> = {
   cyan: {
     key: "cyan",
     name: "Phthalocyanine Blue",
-    role: "your cyan stand-in",
+    role: "strong cyan stand-in",
     color: "#087a99",
   },
   magenta: {
     key: "magenta",
     name: "Medium Magenta",
-    role: "the red-violet mixer",
+    role: "strong red-violet mixer",
     color: "#c9306f",
   },
   yellow: {
     key: "yellow",
     name: "Yellow Medium",
-    role: "the warm primary",
+    role: "warm primary",
     color: "#efbd1f",
   },
   black: {
     key: "black",
     name: "Mars Black",
-    role: "add sparingly",
+    role: "very strong; added sparingly",
     color: "#252422",
   },
   white: {
     key: "white",
     name: "Titanium White",
-    role: "lightens + improves coverage",
+    role: "coverage and dry-down lift",
     color: "#f3f1e8",
   },
 };
 
-function clamp(value: number, min = 0, max = 100) {
-  return Math.min(max, Math.max(min, Number.isFinite(value) ? value : 0));
-}
-
-function cmykToRgb({ c, m, y, k }: Cmyk) {
-  const cyan = clamp(c) / 100;
-  const magenta = clamp(m) / 100;
-  const yellow = clamp(y) / 100;
-  const black = clamp(k) / 100;
-
-  return {
-    r: Math.round(255 * (1 - cyan) * (1 - black)),
-    g: Math.round(255 * (1 - magenta) * (1 - black)),
-    b: Math.round(255 * (1 - yellow) * (1 - black)),
-  };
-}
-
-function rgbToHex({ r, g, b }: { r: number; g: number; b: number }) {
-  return `#${[r, g, b]
-    .map((channel) => clamp(Math.round(channel), 0, 255).toString(16).padStart(2, "0"))
-    .join("")}`.toUpperCase();
-}
-
-function compositeOnBrown(rgb: { r: number; g: number; b: number }, mode: SurfaceMode) {
-  const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
-  const opacity = mode === "white-base" ? 0.98 : 0.74 + (1 - luminance) * 0.1;
-
-  return {
-    r: Math.round(rgb.r * opacity + BROWN_PAPER.r * (1 - opacity)),
-    g: Math.round(rgb.g * opacity + BROWN_PAPER.g * (1 - opacity)),
-    b: Math.round(rgb.b * opacity + BROWN_PAPER.b * (1 - opacity)),
-  };
-}
-
-function describeColor(rgb: { r: number; g: number; b: number }) {
-  const max = Math.max(rgb.r, rgb.g, rgb.b);
-  const min = Math.min(rgb.r, rgb.g, rgb.b);
-  const light = (max + min) / 510;
-  const delta = max - min;
-
-  if (light > 0.91 && delta < 18) return "Soft white";
-  if (light < 0.12) return "Near black";
-  if (delta < 20) return light > 0.62 ? "Light neutral" : light > 0.35 ? "Mid neutral" : "Charcoal";
-
-  let hue = 0;
-  if (max === rgb.r) hue = ((rgb.g - rgb.b) / delta + (rgb.g < rgb.b ? 6 : 0)) * 60;
-  else if (max === rgb.g) hue = ((rgb.b - rgb.r) / delta + 2) * 60;
-  else hue = ((rgb.r - rgb.g) / delta + 4) * 60;
-
-  const tone = light > 0.72 ? "Light " : light < 0.3 ? "Deep " : "";
-  if (hue < 15 || hue >= 345) return `${tone}red`;
-  if (hue < 42) return `${tone}orange`;
-  if (hue < 68) return `${tone}yellow`;
-  if (hue < 165) return `${tone}green`;
-  if (hue < 198) return `${tone}teal`;
-  if (hue < 255) return `${tone}blue`;
-  if (hue < 292) return `${tone}violet`;
-  if (hue < 345) return `${tone}magenta`;
-  return `${tone}red`;
-}
-
-function getRecipe(cmyk: Cmyk, surface: SurfaceMode, totalAmount: number): Paint[] {
-  const c = clamp(cmyk.c) / 100;
-  const m = clamp(cmyk.m) / 100;
-  const y = clamp(cmyk.y) / 100;
-  const k = clamp(cmyk.k) / 100;
-  const shared = Math.min(c, m, y) * (1 - k);
-  const rgb = cmykToRgb(cmyk);
-  const luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b) / 255;
-
-  const weights: Record<string, number> = {
-    cyan: Math.max(0, c - Math.min(c, m, y)) * (1 - k),
-    magenta: Math.max(0, m - Math.min(c, m, y)) * (1 - k),
-    yellow: Math.max(0, y - Math.min(c, m, y)) * (1 - k),
-    black: k * 1.05 + shared * 0.68,
-    white: (1 - Math.max(c, m, y)) * (1 - k),
-  };
-
-  if (surface === "direct") {
-    weights.white += 0.12 + luminance * 0.22;
-  }
-
-  let totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0);
-  if (totalWeight < 0.001) {
-    weights.white = 1;
-    totalWeight = 1;
-  }
-
-  return Object.entries(weights)
-    .filter(([, weight]) => weight / totalWeight >= 0.008)
-    .map(([key, weight]) => ({
-      ...paintDetails[key],
-      weight,
-      amount: (weight / totalWeight) * totalAmount,
-      parts: (weight / totalWeight) * 10,
-    }));
-}
+const calibrationLabels: Record<number, string> = {
+  0.85: "Weaker than expected",
+  1: "Matches the starter swatch",
+  1.15: "Stronger than expected",
+};
 
 function formatAmount(amount: number, unit: Unit) {
-  if (unit === "drops") return `${Math.max(1, Math.round(amount))}`;
+  if (unit === "drops") return `${Math.round(amount)}`;
   if (amount < 0.1) return "<0.1";
   if (amount < 10) return amount.toFixed(1);
   return amount.toFixed(0);
@@ -174,31 +95,126 @@ function getSavedColors(): SavedColor[] {
   }
 }
 
+function getSavedCalibration(): PaintCalibration {
+  if (typeof window === "undefined") return DEFAULT_CALIBRATION;
+  try {
+    const stored = window.localStorage.getItem("paper-paint-calibration");
+    return stored
+      ? { ...DEFAULT_CALIBRATION, ...(JSON.parse(stored) as Partial<PaintCalibration>) }
+      : DEFAULT_CALIBRATION;
+  } catch {
+    return DEFAULT_CALIBRATION;
+  }
+}
+
 export function PaintCalculator() {
+  const initialHex = rgbToHex(cmykToRgb(DEFAULT_CMYK));
   const [cmyk, setCmyk] = useState<Cmyk>(DEFAULT_CMYK);
+  const [rgbOverride, setRgbOverride] = useState<Rgb | null>(null);
+  const [inputMode, setInputMode] = useState<InputMode>("cmyk");
+  const [hexDraft, setHexDraft] = useState(initialHex);
   const [surface, setSurface] = useState<SurfaceMode>("direct");
+  const [paperHex, setPaperHex] = useState(DEFAULT_PAPER_HEX);
+  const [paperDraft, setPaperDraft] = useState(DEFAULT_PAPER_HEX);
+  const [coats, setCoats] = useState(2);
   const [totalAmount, setTotalAmount] = useState(30);
   const [unit, setUnit] = useState<Unit>("drops");
+  const [calibration, setCalibration] =
+    useState<PaintCalibration>(DEFAULT_CALIBRATION);
   const [savedColors, setSavedColors] = useState<SavedColor[]>([]);
   const [savedNotice, setSavedNotice] = useState("Save this color to banner palette");
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setSavedColors(getSavedColors()), 0);
+    const timer = window.setTimeout(() => {
+      setSavedColors(getSavedColors());
+      setCalibration(getSavedCalibration());
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
-  const rgb = useMemo(() => cmykToRgb(cmyk), [cmyk]);
+  const rgb = useMemo(() => rgbOverride ?? cmykToRgb(cmyk), [cmyk, rgbOverride]);
   const hex = useMemo(() => rgbToHex(rgb), [rgb]);
-  const paperHex = useMemo(() => rgbToHex(compositeOnBrown(rgb, surface)), [rgb, surface]);
-  const colorName = useMemo(() => describeColor(rgb), [rgb]);
-  const recipe = useMemo(
-    () => getRecipe(cmyk, surface, Math.max(0.1, totalAmount)),
-    [cmyk, surface, totalAmount],
+  const paperRgb = useMemo(
+    () => hexToRgb(paperHex) ?? (hexToRgb(DEFAULT_PAPER_HEX) as Rgb),
+    [paperHex],
   );
+  const paperEstimate = useMemo(
+    () => rgbToHex(compositeOnPaper(rgb, paperRgb, surface, coats)),
+    [rgb, paperRgb, surface, coats],
+  );
+  const colorName = useMemo(() => describeColor(rgb), [rgb]);
+  const matchQuality = useMemo(
+    () => getMatchQuality(rgb, surface, coats),
+    [rgb, surface, coats],
+  );
+  const totalMixAmount = useMemo(() => {
+    const perCoat =
+      unit === "drops"
+        ? Math.max(1, Math.round(totalAmount))
+        : Math.max(0.1, totalAmount);
+    return perCoat * coats;
+  }, [coats, totalAmount, unit]);
+  const recipeWeights = useMemo(() => {
+    const minimumRatio =
+      unit === "drops" ? Math.max(0.008, 0.5 / totalMixAmount) : 0.008;
+    return getRecipeWeights(cmyk, surface, coats, calibration, minimumRatio);
+  }, [calibration, cmyk, coats, surface, totalMixAmount, unit]);
+  const recipe = useMemo(() => {
+    if (unit === "drops") {
+      return allocateExactDrops(recipeWeights, totalMixAmount).map((paint) => ({
+        ...paintDetails[paint.key],
+        ...paint,
+      }));
+    }
+
+    return recipeWeights.map((paint) => ({
+      ...paintDetails[paint.key],
+      ...paint,
+      amount: paint.ratio * totalMixAmount,
+    }));
+  }, [recipeWeights, totalMixAmount, unit]);
 
   function updateChannel(channel: keyof Cmyk, value: number) {
-    setCmyk((current) => ({ ...current, [channel]: clamp(value) }));
+    const nextCmyk = { ...cmyk, [channel]: clamp(value) };
+    setCmyk(nextCmyk);
+    setRgbOverride(null);
+    setHexDraft(rgbToHex(cmykToRgb(nextCmyk)));
     setSavedNotice("Save this color to banner palette");
+  }
+
+  function updateRgbChannel(channel: keyof Rgb, value: number) {
+    const nextRgb = { ...rgb, [channel]: clamp(value, 0, 255) };
+    setCmyk(rgbToCmyk(nextRgb));
+    setRgbOverride(nextRgb);
+    setHexDraft(rgbToHex(nextRgb));
+    setSavedNotice("Save this color to banner palette");
+  }
+
+  function updateHex(value: string) {
+    setHexDraft(value);
+    const parsed = hexToRgb(value);
+    if (parsed) {
+      setCmyk(rgbToCmyk(parsed));
+      setRgbOverride(parsed);
+      setSavedNotice("Save this color to banner palette");
+    }
+  }
+
+  function updatePaper(value: string) {
+    setPaperDraft(value);
+    const parsed = hexToRgb(value);
+    if (parsed) setPaperHex(rgbToHex(parsed));
+  }
+
+  function updateCalibration(key: PaintKey, value: number) {
+    const updated = { ...calibration, [key]: value };
+    setCalibration(updated);
+    window.localStorage.setItem("paper-paint-calibration", JSON.stringify(updated));
+  }
+
+  function resetCalibration() {
+    setCalibration(DEFAULT_CALIBRATION);
+    window.localStorage.removeItem("paper-paint-calibration");
   }
 
   function saveColor() {
@@ -221,16 +237,30 @@ export function PaintCalculator() {
   }
 
   function loadSavedColor(color: SavedColor) {
-    setCmyk({ c: color.c, m: color.m, y: color.y, k: color.k });
+    const nextCmyk = { c: color.c, m: color.m, y: color.y, k: color.k };
+    setCmyk(nextCmyk);
+    setRgbOverride(hexToRgb(color.hex));
+    setHexDraft(rgbToHex(cmykToRgb(nextCmyk)));
     setSavedNotice("Save this color to banner palette");
-    document.querySelector(".calculator-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .querySelector(".calculator-grid")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function resetColor() {
+    setCmyk(DEFAULT_CMYK);
+    setRgbOverride(null);
+    setHexDraft(initialHex);
+    setSavedNotice("Save this color to banner palette");
   }
 
   return (
     <main className="site-shell">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">P+</span>
+          <span className="brand-mark" aria-hidden="true">
+            P+
+          </span>
           Paper + Paint
         </div>
         <div className="top-note">Made for banner painting</div>
@@ -238,20 +268,20 @@ export function PaintCalculator() {
 
       <section className="hero">
         <div>
-          <p className="eyebrow">CMYK to acrylic mixer</p>
+          <p className="eyebrow">Screen color to acrylic mixer</p>
           <h1>
             From screen to <em>brown paper.</em>
           </h1>
           <p className="hero-copy">
-            Enter a banner color from Adobe and get a practical Master&apos;s Touch paint
-            recipe, scaled to the amount you need.
+            Enter a banner color from Adobe and get a practical Master&apos;s Touch
+            paint recipe, adjusted for your paper, coats, and dried swatches.
           </p>
         </div>
         <aside className="hero-tip">
           <strong>A good mix starts with a swatch.</strong>
           <p>
-            Screen color, pigment, and paper all behave differently. Use this as your
-            first mix, let a small test dry, then make the tiny adjustment it suggests.
+            The starter calibration accounts for strong pigments and acrylic
+            dry-down. Fine-tune it with your own dried Master&apos;s Touch swatches.
           </p>
         </aside>
       </section>
@@ -264,49 +294,123 @@ export function PaintCalculator() {
                 <span className="step-number">Step 01</span>
                 <h2>Enter your Adobe color</h2>
               </div>
-              <button
-                className="reset-button"
-                type="button"
-                onClick={() => setCmyk(DEFAULT_CMYK)}
-              >
+              <button className="reset-button" type="button" onClick={resetColor}>
                 Reset
               </button>
             </div>
 
             <div className="input-content">
-              <div className="channel-list">
-                {(["c", "m", "y", "k"] as const).map((channel) => (
-                  <div className="channel-row" key={channel}>
-                    <label className="channel-label" htmlFor={`${channel}-range`}>
-                      <span className={`channel-dot ${channel}`} aria-hidden="true" />
-                      {channel.toUpperCase()}
-                    </label>
-                    <input
-                      id={`${channel}-range`}
-                      type="range"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={cmyk[channel]}
-                      onChange={(event) => updateChannel(channel, Number(event.target.value))}
-                      aria-label={`${channel.toUpperCase()} percentage`}
-                    />
-                    <div className="number-wrap">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        inputMode="numeric"
-                        value={cmyk[channel] === 0 ? "" : cmyk[channel]}
-                        placeholder="0"
-                        onChange={(event) => updateChannel(channel, Number(event.target.value))}
-                        aria-label={`${channel.toUpperCase()} exact percentage`}
-                      />
-                      <span>%</span>
-                    </div>
-                  </div>
+              <div className="input-tabs" role="group" aria-label="Color value type">
+                {(["cmyk", "rgb", "hex"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={inputMode === mode}
+                    onClick={() => {
+                      setInputMode(mode);
+                      if (mode === "hex") setHexDraft(hex);
+                    }}
+                  >
+                    {mode.toUpperCase()}
+                  </button>
                 ))}
               </div>
+
+              {inputMode === "cmyk" && (
+                <>
+                  <p className="input-guide">
+                    CMYK depends on the Adobe document profile. For the closest
+                    match to what you see on screen, use Adobe&apos;s HEX or RGB value.
+                  </p>
+                  <div className="channel-list">
+                    {(["c", "m", "y", "k"] as const).map((channel) => (
+                      <div className="channel-row" key={channel}>
+                        <label className="channel-label" htmlFor={`${channel}-range`}>
+                          <span
+                            className={`channel-dot ${channel}`}
+                            aria-hidden="true"
+                          />
+                          {channel.toUpperCase()}
+                        </label>
+                        <input
+                          id={`${channel}-range`}
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={cmyk[channel]}
+                          onChange={(event) =>
+                            updateChannel(channel, Number(event.target.value))
+                          }
+                          aria-label={`${channel.toUpperCase()} percentage`}
+                        />
+                        <div className="number-wrap">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            inputMode="numeric"
+                            value={cmyk[channel] === 0 ? "" : cmyk[channel]}
+                            placeholder="0"
+                            onChange={(event) =>
+                              updateChannel(channel, Number(event.target.value))
+                            }
+                            aria-label={`${channel.toUpperCase()} exact percentage`}
+                          />
+                          <span>%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {inputMode === "rgb" && (
+                <div className="rgb-grid">
+                  {(["r", "g", "b"] as const).map((channel) => (
+                    <div className="field" key={channel}>
+                      <label htmlFor={`${channel}-value`}>
+                        {channel === "r" ? "Red" : channel === "g" ? "Green" : "Blue"}
+                      </label>
+                      <input
+                        id={`${channel}-value`}
+                        type="number"
+                        min="0"
+                        max="255"
+                        inputMode="numeric"
+                        value={rgb[channel] === 0 ? "" : rgb[channel]}
+                        placeholder="0"
+                        onChange={(event) =>
+                          updateRgbChannel(channel, Number(event.target.value))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {inputMode === "hex" && (
+                <div className="hex-field field">
+                  <label htmlFor="hex-value">Adobe HEX value</label>
+                  <input
+                    id="hex-value"
+                    type="text"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    maxLength={7}
+                    value={hexDraft}
+                    onChange={(event) => updateHex(event.target.value)}
+                    onBlur={() => {
+                      setHexDraft(hex);
+                    }}
+                    aria-invalid={!hexToRgb(hexDraft)}
+                    placeholder="#E14136"
+                  />
+                  {!hexToRgb(hexDraft) && (
+                    <span className="field-error">Enter a 3- or 6-digit HEX color.</span>
+                  )}
+                </div>
+              )}
 
               <div className="preview-strip">
                 <div className="color-preview" style={{ background: hex }}>
@@ -315,18 +419,24 @@ export function PaintCalculator() {
                 <div
                   className="color-preview"
                   style={{
-                    backgroundColor: paperHex,
+                    backgroundColor: paperEstimate,
                     backgroundImage:
                       "linear-gradient(135deg, rgba(82,51,25,.08) 25%, transparent 25%)",
                     backgroundSize: "13px 13px",
                   }}
                 >
-                  <span>Paper estimate</span>
+                  <span>
+                    Paper · {coats} {coats === 1 ? "coat" : "coats"}
+                  </span>
                 </div>
               </div>
 
               <p className="choice-title">How will you paint the brown paper?</p>
-              <div className="segmented" role="group" aria-label="Brown paper preparation">
+              <div
+                className="segmented"
+                role="group"
+                aria-label="Brown paper preparation"
+              >
                 <button
                   type="button"
                   aria-pressed={surface === "white-base"}
@@ -347,23 +457,71 @@ export function PaintCalculator() {
                 </button>
               </div>
 
+              <div className="paper-row">
+                <div className="field paper-color-field">
+                  <label htmlFor="paper-color">Your paper color</label>
+                  <div className="color-input-wrap">
+                    <input
+                      id="paper-color"
+                      type="color"
+                      value={paperHex}
+                      onChange={(event) => {
+                        setPaperHex(event.target.value.toUpperCase());
+                        setPaperDraft(event.target.value.toUpperCase());
+                      }}
+                    />
+                    <input
+                      type="text"
+                      value={paperDraft}
+                      maxLength={7}
+                      onChange={(event) => updatePaper(event.target.value)}
+                      onBlur={() => setPaperDraft(paperHex)}
+                      aria-label="Paper color HEX value"
+                    />
+                  </div>
+                </div>
+                <div className="field">
+                  <label htmlFor="coat-count">Thin coats</label>
+                  <select
+                    id="coat-count"
+                    value={coats}
+                    onChange={(event) => setCoats(Number(event.target.value))}
+                  >
+                    <option value="1">1 coat</option>
+                    <option value="2">2 coats</option>
+                    <option value="3">3 coats</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="batch-row">
                 <div className="field">
-                  <label htmlFor="batch-size">Total mix amount</label>
+                  <label htmlFor="batch-size">Amount needed per coat</label>
                   <input
                     id="batch-size"
                     type="number"
-                    min="0.1"
+                    min={unit === "drops" ? "1" : "0.1"}
                     max="999"
-                    step="0.1"
-                    inputMode="decimal"
+                    step={unit === "drops" ? "1" : "0.1"}
+                    inputMode={unit === "drops" ? "numeric" : "decimal"}
                     value={totalAmount}
-                    onChange={(event) => setTotalAmount(Math.max(0.1, Number(event.target.value) || 0.1))}
+                    onChange={(event) =>
+                      setTotalAmount(
+                        Math.max(
+                          unit === "drops" ? 1 : 0.1,
+                          Number(event.target.value) || (unit === "drops" ? 1 : 0.1),
+                        ),
+                      )
+                    }
                   />
                 </div>
                 <div className="field">
                   <label htmlFor="unit">Measure in</label>
-                  <select id="unit" value={unit} onChange={(event) => setUnit(event.target.value as Unit)}>
+                  <select
+                    id="unit"
+                    value={unit}
+                    onChange={(event) => setUnit(event.target.value as Unit)}
+                  >
                     <option value="mL">milliliters</option>
                     <option value="tsp">teaspoons</option>
                     <option value="fl oz">fluid ounces</option>
@@ -371,13 +529,52 @@ export function PaintCalculator() {
                   </select>
                 </div>
               </div>
+
+              <details className="calibration-card">
+                <summary>Calibrate with your dried swatches</summary>
+                <p>
+                  The starter settings already use less Phthalo Blue and Mars Black
+                  because they tint strongly. After a swatch dries, record whether
+                  each paint acted weaker or stronger than expected. These settings
+                  stay on this iPad.
+                </p>
+                <div className="calibration-grid">
+                  {(Object.keys(paintDetails) as PaintKey[]).map((key) => (
+                    <div className="field" key={key}>
+                      <label htmlFor={`calibration-${key}`}>
+                        {paintDetails[key].name}
+                      </label>
+                      <select
+                        id={`calibration-${key}`}
+                        value={calibration[key]}
+                        onChange={(event) =>
+                          updateCalibration(key, Number(event.target.value))
+                        }
+                      >
+                        {Object.entries(calibrationLabels).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+                <button className="text-button" type="button" onClick={resetCalibration}>
+                  Reset swatch calibration
+                </button>
+              </details>
             </div>
           </section>
 
           <section className="panel result-panel" aria-live="polite">
             <div className="panel-header">
               <div className="result-top">
-                <span className="result-swatch" style={{ background: hex }} aria-hidden="true" />
+                <span
+                  className="result-swatch"
+                  style={{ background: hex }}
+                  aria-hidden="true"
+                />
                 <div>
                   <span className="step-number">Step 02 · {colorName}</span>
                   <h2>Your mix recipe</h2>
@@ -386,13 +583,32 @@ export function PaintCalculator() {
             </div>
 
             <div className="result-content">
+              <div className={`match-card match-${matchQuality.level}`}>
+                <span className="match-dot" aria-hidden="true" />
+                <div>
+                  <strong>{matchQuality.label}</strong>
+                  <p>{matchQuality.detail}</p>
+                </div>
+              </div>
+
               <div className="accuracy-note">
                 <b aria-hidden="true">✓</b>
                 <span>
                   {surface === "white-base"
-                    ? "Brush 1–2 thin coats of Titanium White under this color first. Let the base dry before painting."
-                    : "This recipe adds extra Titanium White for coverage. Plan on 2 thin coats; the brown paper will still warm the color."}
+                    ? `Brush a thin Titanium White base first, let it dry, then use ${coats} thin ${coats === 1 ? "coat" : "coats"} of this mix.`
+                    : `This formula adds coverage white and dry-down compensation for ${coats} thin ${coats === 1 ? "coat" : "coats"} directly on the paper.`}
                 </span>
+              </div>
+
+              <div className="mix-total">
+                <span>Total recipe</span>
+                <strong>
+                  {formatAmount(totalMixAmount, unit)} {unit}
+                </strong>
+                <small>
+                  {formatAmount(totalAmount, unit)} {unit} × {coats}{" "}
+                  {coats === 1 ? "coat" : "coats"}
+                </small>
               </div>
 
               <div className="ratio-bar" aria-hidden="true">
@@ -400,7 +616,10 @@ export function PaintCalculator() {
                   <span
                     className="ratio-segment"
                     key={paint.key}
-                    style={{ background: paint.color, flexGrow: paint.weight }}
+                    style={{
+                      background: paint.color,
+                      flexGrow: unit === "drops" ? paint.amount : paint.ratio,
+                    }}
                   />
                 ))}
               </div>
@@ -408,10 +627,16 @@ export function PaintCalculator() {
               <div className="recipe-list">
                 {recipe.map((paint) => (
                   <div className="recipe-row" key={paint.key}>
-                    <span className="paint-chip" style={{ background: paint.color }} aria-hidden="true" />
+                    <span
+                      className="paint-chip"
+                      style={{ background: paint.color }}
+                      aria-hidden="true"
+                    />
                     <div>
                       <span className="paint-name">{paint.name}</span>
-                      <span className="paint-role">Master&apos;s Touch · {paint.role}</span>
+                      <span className="paint-role">
+                        Master&apos;s Touch · {paint.role}
+                      </span>
                     </div>
                     <div className="paint-amount">
                       <strong>{formatAmount(paint.amount, unit)}</strong>
@@ -426,7 +651,8 @@ export function PaintCalculator() {
                 {recipe.map((paint, index) => (
                   <span key={paint.key}>
                     {index > 0 ? " · " : ""}
-                    {formatParts(paint.parts)} {paint.name.replace("Phthalocyanine", "Phthalo")}
+                    {formatParts(paint.parts)}{" "}
+                    {paint.name.replace("Phthalocyanine", "Phthalo")}
                   </span>
                 ))}
                 .
@@ -439,14 +665,22 @@ export function PaintCalculator() {
               <div className="saved-section">
                 <div className="saved-header">
                   <h3>Your banner palette</h3>
-                  {savedColors.length > 0 && <span className="step-number">{savedColors.length}/8 saved</span>}
+                  {savedColors.length > 0 && (
+                    <span className="step-number">{savedColors.length}/8 saved</span>
+                  )}
                 </div>
                 <div className="saved-colors">
                   {savedColors.length === 0 ? (
-                    <p className="saved-empty">Save each Adobe color here while you plan the banner.</p>
+                    <p className="saved-empty">
+                      Save each Adobe color here while you plan the banner.
+                    </p>
                   ) : (
                     savedColors.map((color) => (
-                      <article className="saved-color" key={color.id} style={{ background: color.hex }}>
+                      <article
+                        className="saved-color"
+                        key={color.id}
+                        style={{ background: color.hex }}
+                      >
                         <button
                           className="saved-color-main"
                           type="button"
@@ -474,13 +708,12 @@ export function PaintCalculator() {
             </div>
           </section>
         </div>
-
       </section>
 
       <p className="footer-note">
-        This is a studio starting recipe, not a color-managed formula. CMYK describes printer ink,
-        while acrylic pigment, paint line, brush thickness, lighting, and the exact brown paper all
-        affect the finished color.
+        This is a studio starting recipe, not a color-managed formula. Adobe
+        profiles, acrylic pigments, brush thickness, lighting, and your exact paper
+        affect the dried result. Use the swatch calibration to tune future mixes.
       </p>
     </main>
   );
