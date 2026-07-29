@@ -176,9 +176,9 @@ function getSavedColors(): SavedColor[] {
 
 export function PaintCalculator() {
   const [cmyk, setCmyk] = useState<Cmyk>(DEFAULT_CMYK);
-  const [surface, setSurface] = useState<SurfaceMode>("white-base");
+  const [surface, setSurface] = useState<SurfaceMode>("direct");
   const [totalAmount, setTotalAmount] = useState(30);
-  const [unit, setUnit] = useState<Unit>("mL");
+  const [unit, setUnit] = useState<Unit>("drops");
   const [savedColors, setSavedColors] = useState<SavedColor[]>([]);
   const [savedNotice, setSavedNotice] = useState("Save this color to banner palette");
 
