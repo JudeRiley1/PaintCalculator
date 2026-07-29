@@ -184,14 +184,22 @@ h1 em {
 
 .hero-tip::before {
   position: absolute;
-  top: 1.8rem;
-  left: -0.45rem;
-  width: 0.8rem;
-  height: 0.8rem;
-  border: 4px solid var(--coral);
-  border-radius: 50%;
-  background: #fbfaf7;
+  top: -0.7rem;
+  right: 2.4rem;
+  width: 5.4rem;
+  height: 1.35rem;
+  border: 0;
+  border-radius: 0.12rem;
+  background:
+    linear-gradient(90deg, rgba(244, 226, 186, 0.7), rgba(235, 211, 158, 0.56)),
+    rgba(239, 218, 173, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 2px 5px rgba(80, 60, 35, 0.08);
+  clip-path: polygon(2% 8%, 98% 0, 100% 92%, 1% 100%);
   content: "";
+  transform: rotate(-3deg);
+  backdrop-filter: blur(1px);
 }
 
 .hero-tip strong {
