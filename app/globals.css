@@ -2,12 +2,12 @@
 
 :root {
   --ink: #27231f;
-  --muted: #66594c;
-  --canvas: #c9955e;
-  --paper: #f0e5d5;
-  --paper-deep: #dcc9ae;
-  --card: rgba(255, 251, 242, 0.95);
-  --line: rgba(70, 47, 27, 0.16);
+  --muted: #6d6862;
+  --canvas: #f7f6f3;
+  --paper: #f8f5ef;
+  --paper-deep: #ece7df;
+  --card: rgba(255, 255, 255, 0.94);
+  --line: rgba(50, 43, 37, 0.12);
   --coral: #e85d3f;
   --coral-dark: #b93d27;
   --yellow: #f3bd35;
@@ -27,15 +27,15 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background-color: #c9955e;
+  background-color: #f7f6f3;
   background:
-    radial-gradient(circle at 4% 3%, rgba(240, 91, 61, 0.22), transparent 25rem),
-    radial-gradient(circle at 98% 9%, rgba(0, 146, 174, 0.2), transparent 24rem),
-    linear-gradient(rgba(245, 213, 158, 0.06), rgba(100, 57, 23, 0.08)),
+    radial-gradient(circle at 3% 2%, rgba(242, 128, 153, 0.15), transparent 23rem),
+    radial-gradient(circle at 97% 8%, rgba(87, 192, 207, 0.14), transparent 22rem),
+    linear-gradient(rgba(255, 255, 255, 0.28), rgba(248, 246, 242, 0.18)),
     var(--paper-texture);
-  background-blend-mode: multiply, multiply, soft-light, normal;
+  background-blend-mode: normal, normal, soft-light, normal;
   background-attachment: fixed;
-  background-size: auto, auto, auto, 760px 760px;
+  background-size: auto, auto, auto, 820px 820px;
   font-family: "Avenir Next", Avenir, "Trebuchet MS", system-ui, sans-serif;
   text-rendering: optimizeLegibility;
 }
@@ -90,14 +90,13 @@ select:focus-visible {
   width: 14rem;
   height: 12rem;
   border-radius: 54% 46% 61% 39% / 42% 57% 43% 58%;
-  background: rgba(14, 158, 187, 0.28);
+  background: rgba(75, 189, 207, 0.16);
   box-shadow:
-    86vw -10rem 0 -0.5rem rgba(213, 43, 105, 0.2),
-    79vw 38rem 0 3rem rgba(244, 190, 34, 0.18),
-    12vw 63rem 0 -1rem rgba(232, 93, 63, 0.18);
+    86vw -10rem 0 -0.5rem rgba(224, 89, 139, 0.13),
+    79vw 38rem 0 3rem rgba(247, 201, 79, 0.13),
+    12vw 63rem 0 -1rem rgba(239, 119, 91, 0.11);
   content: "";
-  filter: blur(22px);
-  mix-blend-mode: multiply;
+  filter: blur(28px);
   pointer-events: none;
   transform: rotate(-12deg);
 }
@@ -118,7 +117,7 @@ select:focus-visible {
   max-width: 1220px;
   margin: 0 auto;
   padding: 1.3rem 1.5rem;
-  border-bottom: 1px solid rgba(72, 46, 22, 0.16);
+  border-bottom: 1px solid rgba(50, 43, 37, 0.1);
 }
 
 .brand {
@@ -211,8 +210,8 @@ h1 em {
   border: 1px solid rgba(63, 53, 44, 0.12);
   border-top: 4px solid var(--yellow);
   border-radius: 1.35rem;
-  background: rgba(255, 252, 244, 0.9);
-  box-shadow: 0 18px 50px rgba(76, 45, 18, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 50px rgba(48, 41, 35, 0.1);
   backdrop-filter: blur(14px);
 }
 
@@ -268,8 +267,8 @@ h1 em {
   border-radius: 1.65rem;
   background: var(--card);
   box-shadow:
-    0 1px 1px rgba(56, 38, 20, 0.05),
-    0 20px 55px rgba(70, 40, 14, 0.14);
+    0 1px 1px rgba(50, 43, 37, 0.04),
+    0 20px 55px rgba(50, 43, 37, 0.09);
   backdrop-filter: blur(12px);
 }
 

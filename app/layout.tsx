@@ -55,7 +55,7 @@ export default function RootLayout({
 }>) {
   const basePath = process.env.GITHUB_PAGES_BASE_PATH ?? "";
   const paperStyle = {
-    "--paper-texture": `url("${basePath}/kraft-paper.webp")`,
+    "--paper-texture": `url("${basePath}/white-paper.webp")`,
   } as CSSProperties;
 
   return (
