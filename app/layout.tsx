@@ -1,7 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import type { CSSProperties } from "react";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  themeColor: "#f7f6f3",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   let origin = process.env.NEXT_PUBLIC_SITE_URL;
@@ -25,10 +29,29 @@ export async function generateMetadata(): Promise<Metadata> {
       template: "%s · Paper + Paint",
     },
     description:
-      "A CMYK-to-acrylic mixing guide made for Master's Touch paint and brown paper banners.",
+      "An Adobe-color-to-acrylic mixing guide made for Master's Touch paint and brown paper banners.",
+    manifest: `${basePath}/manifest.webmanifest`,
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: "Paper + Paint",
+    },
+    icons: {
+      icon: [
+        { url: `${basePath}/icon-192.png`, sizes: "192x192", type: "image/png" },
+        { url: `${basePath}/icon-512.png`, sizes: "512x512", type: "image/png" },
+      ],
+      apple: [
+        {
+          url: `${basePath}/apple-touch-icon.png`,
+          sizes: "180x180",
+          type: "image/png",
+        },
+      ],
+    },
     openGraph: {
       title: "Paper + Paint",
-      description: "From CMYK to acrylic — made for brown paper banners.",
+      description: "From Adobe color to acrylic — made for brown paper banners.",
       type: "website",
       images: [
         {
@@ -42,7 +65,7 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: "Paper + Paint",
-      description: "From CMYK to acrylic — made for brown paper banners.",
+      description: "From Adobe color to acrylic — made for brown paper banners.",
       images: [`${origin}${basePath}/og.png`],
     },
   };

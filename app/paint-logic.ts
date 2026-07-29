@@ -2,6 +2,13 @@ export type Cmyk = { c: number; m: number; y: number; k: number };
 export type Rgb = { r: number; g: number; b: number };
 export type SurfaceMode = "white-base" | "direct";
 export type PaintKey = "cyan" | "magenta" | "yellow" | "black" | "white";
+export type SwatchCorrection =
+  | "none"
+  | "too-dark"
+  | "too-light"
+  | "too-warm"
+  | "too-cool"
+  | "too-dull";
 export type PaintCalibration = Record<PaintKey, number>;
 export type MatchQuality = {
   level: "good" | "approximate" | "outside";
@@ -192,6 +199,7 @@ export function getRecipeWeights(
   coats: number,
   calibration: PaintCalibration = DEFAULT_CALIBRATION,
   minimumRatio = 0.008,
+  correction: SwatchCorrection = "none",
 ): RecipeWeight[] {
   const c = clamp(cmyk.c) / 100;
   const m = clamp(cmyk.m) / 100;
@@ -219,6 +227,27 @@ export function getRecipeWeights(
   opticalWeights.white += 0.035 + darkness * (surface === "direct" ? 0.065 : 0.04);
   if (surface === "direct") {
     opticalWeights.white += (0.1 + luminance * 0.2) / Math.sqrt(clamp(coats, 1, 3));
+  }
+
+  if (correction === "too-dark") {
+    opticalWeights.white += 0.12;
+    opticalWeights.black *= 0.72;
+  } else if (correction === "too-light") {
+    opticalWeights.white *= 0.76;
+    opticalWeights.black += 0.07;
+  } else if (correction === "too-warm") {
+    opticalWeights.cyan *= 1.12;
+    opticalWeights.yellow *= 0.88;
+  } else if (correction === "too-cool") {
+    opticalWeights.cyan *= 0.88;
+    opticalWeights.magenta *= 1.04;
+    opticalWeights.yellow *= 1.12;
+  } else if (correction === "too-dull") {
+    opticalWeights.cyan *= 1.12;
+    opticalWeights.magenta *= 1.12;
+    opticalWeights.yellow *= 1.12;
+    opticalWeights.black *= 0.62;
+    opticalWeights.white *= 0.88;
   }
 
   const physicalWeights = (Object.keys(opticalWeights) as PaintKey[]).map((key) => {

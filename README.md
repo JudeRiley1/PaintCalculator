@@ -5,8 +5,12 @@ An iPad-friendly CMYK-to-acrylic paint calculator for brown paper banners.
 Enter CMYK, RGB, or HEX values copied from Adobe to get a scaled Master's
 Touch mixing recipe. The calculator includes exact whole-drop allocation,
 pigment-strength weighting, a customizable brown-paper preview, one-to-three
-coat estimates, dried-swatch calibration, and a banner palette saved locally
-on the device.
+coat estimates, dried-swatch correction, complete saved recipes, custom color
+names, recipe cards, palette reordering, duplicate detection, and shareable
+project links. The current session and palette stay on the device.
+
+The site includes a web app manifest and service worker so it can be added to
+an iPad home screen and used offline after the first successful visit.
 
 ## Publish with GitHub Pages
 

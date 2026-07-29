@@ -117,3 +117,29 @@ test("warns when a bright screen color is outside the practical palette", () => 
   const quality = getMatchQuality({ r: 0, g: 255, b: 80 }, "direct", 1);
   assert.equal(quality.level, "outside");
 });
+
+test("applies practical dried-swatch corrections to the recipe", () => {
+  const target = { c: 12, m: 70, y: 62, k: 8 };
+  const starter = getRecipeWeights(
+    target,
+    "direct",
+    2,
+    DEFAULT_CALIBRATION,
+    0.008,
+    "none",
+  );
+  const lighter = getRecipeWeights(
+    target,
+    "direct",
+    2,
+    DEFAULT_CALIBRATION,
+    0.008,
+    "too-dark",
+  );
+  const starterWhite = starter.find((paint) => paint.key === "white");
+  const lighterWhite = lighter.find((paint) => paint.key === "white");
+
+  assert.ok(starterWhite);
+  assert.ok(lighterWhite);
+  assert.ok(lighterWhite.ratio > starterWhite.ratio);
+});

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
 async function render() {
@@ -36,6 +36,10 @@ test("server-renders the Paper + Paint calculator", async () => {
   assert.match(html, /Calibrate with your dried swatches/);
   assert.match(html, /Your paper color/);
   assert.match(html, /Thin coats/);
+  assert.match(html, /Make a small correction/);
+  assert.match(html, /Copy recipe/);
+  assert.match(html, /Save image/);
+  assert.match(html, /Share project link/);
   assert.match(html, /Master(?:&#x27;|')s Touch/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/);
 });
@@ -48,13 +52,33 @@ test("keeps the calculator client-side and GitHub Pages-ready", async () => {
   ]);
 
   assert.match(calculator, /^"use client";/);
-  assert.match(calculator, /paper-paint-colors/);
+  assert.match(calculator, /PALETTE_KEY/);
   assert.match(calculator, /Phthalocyanine Blue/);
   assert.match(calculator, /Titanium White/);
   assert.match(calculator, /cmyk\[channel\] === 0 \? "" : cmyk\[channel\]/);
   assert.match(calculator, /placeholder="0"/);
   assert.match(calculator, /allocateExactDrops/);
   assert.match(calculator, /getMatchQuality/);
+  assert.match(calculator, /paper-paint-session-v2|SESSION_KEY/);
+  assert.match(calculator, /serviceWorker\.register/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
   assert.match(packageJson, /"build:pages": "next build"/);
+});
+
+test("ships an installable offline app", async () => {
+  const [manifestText, worker, icon192, icon512] = await Promise.all([
+    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+    readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
+    stat(new URL("../public/icon-192.png", import.meta.url)),
+    stat(new URL("../public/icon-512.png", import.meta.url)),
+  ]);
+  const manifest = JSON.parse(manifestText);
+
+  assert.equal(manifest.display, "standalone");
+  assert.equal(manifest.start_url, "./");
+  assert.match(worker, /paper-paint-v3/);
+  assert.match(worker, /caches\.match/);
+  assert.match(worker, /matchAll/);
+  assert.ok(icon192.size > 1000);
+  assert.ok(icon512.size > 1000);
 });
