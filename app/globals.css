@@ -731,54 +731,6 @@ input[type="range"] {
   font-weight: 900;
 }
 
-.guide {
-  margin-top: 1.25rem;
-  padding: clamp(1.5rem, 4vw, 2.4rem);
-  border-radius: 1.65rem;
-  background:
-    radial-gradient(circle at 100% 0, rgba(232, 93, 63, 0.15), transparent 22rem),
-    #272522;
-  color: #f8f1e6;
-}
-
-.guide h2 {
-  margin-bottom: 1.5rem;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.7rem, 4vw, 2.5rem);
-  font-weight: 400;
-  letter-spacing: -0.04em;
-}
-
-.guide-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.8rem;
-}
-
-.guide-card {
-  min-height: 8.8rem;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.guide-card b {
-  display: block;
-  margin-bottom: 0.55rem;
-  color: #f3c758;
-  font-size: 0.76rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.guide-card p {
-  margin: 0;
-  color: #d8cfc4;
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-
 .footer-note {
   max-width: 1220px;
   margin: 0 auto;
@@ -807,9 +759,6 @@ input[type="range"] {
     position: static;
   }
 
-  .guide-grid {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 @media (max-width: 560px) {
@@ -857,13 +806,6 @@ input[type="range"] {
     min-height: 6rem;
   }
 
-  .guide-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .guide-card {
-    min-height: auto;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

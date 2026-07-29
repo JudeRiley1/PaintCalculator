@@ -474,27 +474,6 @@ export function PaintCalculator() {
           </section>
         </div>
 
-        <section className="guide">
-          <h2>Test, dry, then tune.</h2>
-          <div className="guide-grid">
-            <article className="guide-card">
-              <b>If it dries too dark</b>
-              <p>Add Titanium White a half-part at a time. Acrylic usually dries a little darker than it looks wet.</p>
-            </article>
-            <article className="guide-card">
-              <b>If it looks too warm</b>
-              <p>Add the tiniest touch of Phthalocyanine Blue. It is strong, so start with the tip of a brush.</p>
-            </article>
-            <article className="guide-card">
-              <b>If it looks too cool</b>
-              <p>Add a small touch of Yellow Medium; for reds, use Medium Magenta plus a little yellow.</p>
-            </article>
-            <article className="guide-card">
-              <b>If it is too bright</b>
-              <p>Add a pin-tip of Raw Umber or the color opposite it—never a large squeeze of black.</p>
-            </article>
-          </div>
-        </section>
       </section>
 
       <p className="footer-note">
