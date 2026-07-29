@@ -297,7 +297,8 @@ export function PaintCalculator() {
                         min="0"
                         max="100"
                         inputMode="numeric"
-                        value={cmyk[channel]}
+                        value={cmyk[channel] === 0 ? "" : cmyk[channel]}
+                        placeholder="0"
                         onChange={(event) => updateChannel(channel, Number(event.target.value))}
                         aria-label={`${channel.toUpperCase()} exact percentage`}
                       />

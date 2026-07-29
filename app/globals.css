@@ -389,6 +389,11 @@ input[type="range"] {
   text-align: right;
 }
 
+.number-wrap input::placeholder {
+  color: var(--ink);
+  opacity: 1;
+}
+
 .number-wrap span {
   position: absolute;
   top: 50%;

@@ -48,6 +48,8 @@ test("keeps the calculator client-side and GitHub Pages-ready", async () => {
   assert.match(calculator, /paper-paint-colors/);
   assert.match(calculator, /Phthalocyanine Blue/);
   assert.match(calculator, /Titanium White/);
+  assert.match(calculator, /cmyk\[channel\] === 0 \? "" : cmyk\[channel\]/);
+  assert.match(calculator, /placeholder="0"/);
   assert.match(workflow, /actions\/deploy-pages@v4/);
   assert.match(packageJson, /"build:pages": "next build"/);
 });
