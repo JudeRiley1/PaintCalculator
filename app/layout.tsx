@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import type { CSSProperties } from "react";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -52,9 +53,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const basePath = process.env.GITHUB_PAGES_BASE_PATH ?? "";
+  const paperStyle = {
+    "--paper-texture": `url("${basePath}/kraft-paper.webp")`,
+  } as CSSProperties;
+
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body style={paperStyle}>{children}</body>
     </html>
   );
 }

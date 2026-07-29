@@ -2,12 +2,12 @@
 
 :root {
   --ink: #27231f;
-  --muted: #6f675f;
-  --canvas: #f7f4ee;
+  --muted: #66594c;
+  --canvas: #c9955e;
   --paper: #f0e5d5;
   --paper-deep: #dcc9ae;
-  --card: rgba(255, 254, 251, 0.96);
-  --line: rgba(63, 53, 44, 0.13);
+  --card: rgba(255, 251, 242, 0.95);
+  --line: rgba(70, 47, 27, 0.16);
   --coral: #e85d3f;
   --coral-dark: #b93d27;
   --yellow: #f3bd35;
@@ -27,11 +27,15 @@ html {
 body {
   margin: 0;
   min-width: 320px;
+  background-color: #c9955e;
   background:
-    radial-gradient(circle at 5% -8%, rgba(232, 93, 63, 0.13), transparent 31rem),
-    radial-gradient(circle at 96% 8%, rgba(53, 109, 86, 0.1), transparent 27rem),
-    linear-gradient(180deg, #fbfaf7 0%, #f7f4ee 48%, #efe9df 100%);
+    radial-gradient(circle at 4% 3%, rgba(240, 91, 61, 0.22), transparent 25rem),
+    radial-gradient(circle at 98% 9%, rgba(0, 146, 174, 0.2), transparent 24rem),
+    linear-gradient(rgba(245, 213, 158, 0.06), rgba(100, 57, 23, 0.08)),
+    var(--paper-texture);
+  background-blend-mode: multiply, multiply, soft-light, normal;
   background-attachment: fixed;
+  background-size: auto, auto, auto, 760px 760px;
   font-family: "Avenir Next", Avenir, "Trebuchet MS", system-ui, sans-serif;
   text-rendering: optimizeLegibility;
 }
@@ -73,7 +77,37 @@ select:focus-visible {
 
 .site-shell {
   position: relative;
+  isolation: isolate;
+  overflow: hidden;
   min-height: 100vh;
+}
+
+.site-shell::before {
+  position: fixed;
+  z-index: -1;
+  top: 15rem;
+  left: -5rem;
+  width: 14rem;
+  height: 12rem;
+  border-radius: 54% 46% 61% 39% / 42% 57% 43% 58%;
+  background: rgba(14, 158, 187, 0.28);
+  box-shadow:
+    86vw -10rem 0 -0.5rem rgba(213, 43, 105, 0.2),
+    79vw 38rem 0 3rem rgba(244, 190, 34, 0.18),
+    12vw 63rem 0 -1rem rgba(232, 93, 63, 0.18);
+  content: "";
+  filter: blur(22px);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  transform: rotate(-12deg);
+}
+
+.topbar,
+.hero,
+.workspace,
+.footer-note {
+  position: relative;
+  z-index: 1;
 }
 
 .topbar {
@@ -84,7 +118,7 @@ select:focus-visible {
   max-width: 1220px;
   margin: 0 auto;
   padding: 1.3rem 1.5rem;
-  border-bottom: 1px solid rgba(63, 53, 44, 0.09);
+  border-bottom: 1px solid rgba(72, 46, 22, 0.16);
 }
 
 .brand {
@@ -177,8 +211,8 @@ h1 em {
   border: 1px solid rgba(63, 53, 44, 0.12);
   border-top: 4px solid var(--yellow);
   border-radius: 1.35rem;
-  background: rgba(255, 254, 250, 0.82);
-  box-shadow: 0 18px 50px rgba(58, 47, 36, 0.08);
+  background: rgba(255, 252, 244, 0.9);
+  box-shadow: 0 18px 50px rgba(76, 45, 18, 0.16);
   backdrop-filter: blur(14px);
 }
 
@@ -234,8 +268,8 @@ h1 em {
   border-radius: 1.65rem;
   background: var(--card);
   box-shadow:
-    0 1px 1px rgba(56, 45, 34, 0.03),
-    0 20px 55px rgba(56, 45, 34, 0.07);
+    0 1px 1px rgba(56, 38, 20, 0.05),
+    0 20px 55px rgba(70, 40, 14, 0.14);
   backdrop-filter: blur(12px);
 }
 
